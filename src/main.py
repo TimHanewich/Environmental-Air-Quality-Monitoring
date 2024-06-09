@@ -136,32 +136,31 @@ while True:
         body["temperature"] = temperature_f
         body["humidity"] = humidity / 100 # as a percentage
 
-
     # measure AQI, TVOC, ECO2 from ENS160
     wdt.feed()
+    ens160_attempts:int = 0 # if needed
     AQI:int = ens.AQI["value"]
     TVOC:int = ens.TVOC
     ECO2:int = ens.ECO2
-    if AQI == 0 and TVOC == 0 and ECO2 == 0: # an invalid
+    while AQI == 0 and TVOC == 0 and ECO2 == 0 and ens160_attempts < 3:
+        wdt.feed()
         print("ENS160 just returned invalid values (0's)!")
-        ens160_attempts:int = 0
-        while AQI == 0 and TVOC == 0 and ECO2 == 2 and ens160_attempts < 3:
-            
-            # reset
-            print("Setting ENS160 operating mode to 2...")
-            ens.operating_mode = 2
-            print("Operating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
+        
+        # reset
+        print("Setting ENS160 operating mode to 2...")
+        ens.operating_mode = 2
+        print("Operating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
 
-            # wait
-            for x in range(0, 10):
-                wdt.feed()
-                time.sleep(1)
-
-            # re-measure
+        # wait
+        for x in range(0, 10):
             wdt.feed()
-            AQI:int = ens.AQI["value"]
-            TVOC:int = ens.TVOC
-            ECO2:int = ens.ECO2
+            time.sleep(1)
+
+        # re-measure
+        wdt.feed()
+        AQI:int = ens.AQI["value"]
+        TVOC:int = ens.TVOC
+        ECO2:int = ens.ECO2
 
     # log if successful
     wdt.feed()

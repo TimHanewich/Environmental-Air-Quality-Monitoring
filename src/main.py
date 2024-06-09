@@ -56,11 +56,11 @@ print("My IP Address: " + my_ip)
 
 # set up DHT-22 sensor
 print("Setting up DHT22...")
-dht22 = dht.DHT22(machine.Pin(10, machine.Pin.IN))
+dht22 = dht.DHT22(machine.Pin(settings.dht22_gpio, machine.Pin.IN))
 
 # Set up ENS160 + AHT21
 print("Setting up I2C...")
-i2c = machine.I2C(0, scl=machine.Pin(17), sda=machine.Pin(16))
+i2c = machine.I2C(settings.i2c_bus, scl=machine.Pin(settings.i2c_scl), sda=machine.Pin(settings.i2c_sda))
 print("I2C devices: " + str(i2c.scan()))
 if 0x53 not in i2c.scan(): # if the ENS160 is not seen in the list of available I2C devices
     error_pattern()

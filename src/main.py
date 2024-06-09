@@ -144,7 +144,10 @@ while True:
     AQI:int = ens.AQI["value"]
     TVOC:int = ens.TVOC
     ECO2:int = ens.ECO2
-    while AQI == 0 and TVOC == 0 and ECO2 == 0 and ens160_attempts < 3:
+    while AQI == 0 and TVOC == 0 and ECO2 == 0 and ens160_attempts < 10:
+
+        ens160_attempts = ens160_attempts + 1
+
         wdt.feed()
         print("\t\tENS160 just returned invalid values (0's)!")
         

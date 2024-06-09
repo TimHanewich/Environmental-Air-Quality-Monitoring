@@ -62,7 +62,7 @@ dht22 = dht.DHT22(machine.Pin(10, machine.Pin.IN))
 print("Setting up I2C...")
 i2c = machine.I2C(0, scl=machine.Pin(17), sda=machine.Pin(16))
 print("I2C devices: " + str(i2c.scan()))
-if len(i2c.scan()) == 0:
+if 0x53 not in i2c.scan(): # if the ENS160 is not seen in the list of available I2C devices
     error_pattern()
 print("Setting up ENS160...")
 ens = ENS160.ENS160(i2c)
@@ -78,9 +78,10 @@ time.sleep(10)
 # start watchdog timer
 wdt = machine.WDT(timeout=8388) # 8,388 ms is the limit (8.388 seconds)
 wdt.feed()
-print("Watchdog timer now activated.")
+print("Watchdog timer now active.")
 
 # inifinite loop
+print("Entering infinite loop...")
 samples_uploaded:int = 0
 while True:
 

@@ -87,7 +87,7 @@ while True:
     # before proceeding to sample + upload, confirm that we are still online
     wifi_con_attempt = 0
     while wlan.isconnected() == False:
-        print("Ready to upload data but not connected!")
+        print("Time to record + upload data but not connected!")
         wifi_con_attempt = wifi_con_attempt + 1
 
         # blip light
@@ -136,23 +136,32 @@ while True:
         body["temperature"] = temperature_f
         body["humidity"] = humidity / 100 # as a percentage
 
-    # measure from ENS160
+
+    # measure AQI, TVOC, ECO2 from ENS160
     wdt.feed()
-    ens160_attempts:int = 0
-    AQI:int = 0
-    TVOC:int = 0
-    ECO2:int = 0
-    while (AQI == 0 and TVOC == 0 and ECO2 == 0) and ens160_attempts < 10: # straight 0's in the readings means it doesnt work. Please note, it IS possible for TVOC to be 0. That is common in very air clean settings.
-        try:
+    AQI:int = ens.AQI["value"]
+    TVOC:int = ens.TVOC
+    ECO2:int = ens.ECO2
+    if AQI == 0 and TVOC == 0 and ECO2 == 0: # an invalid
+        print("ENS160 just returned invalid values (0's)!")
+        ens160_attempts:int = 0
+        while AQI == 0 and TVOC == 0 and ECO2 == 2 and ens160_attempts < 3:
+            
+            # reset
+            print("Setting ENS160 operating mode to 2...")
+            ens.operating_mode = 2
+            print("Operating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
+
+            # wait
+            for x in range(0, 10):
+                wdt.feed()
+                time.sleep(1)
+
+            # re-measure
             wdt.feed()
-            print("\tMeasuring air quality data from ENS160 attempt # " + str(ens160_attempts + 1) + "...")
-            AQI:int = ens.AQI
+            AQI:int = ens.AQI["value"]
             TVOC:int = ens.TVOC
-            ECO2:int = ens.CO2
-        except Exception as e:
-            print("Reading attempt failed! Exception msg: " + str(e))
-        ens160_attempts = ens160_attempts + 1
-        time.sleep(0.25)
+            ECO2:int = ens.ECO2
 
     # log if successful
     wdt.feed()

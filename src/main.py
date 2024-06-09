@@ -144,12 +144,12 @@ while True:
     ECO2:int = ens.ECO2
     while AQI == 0 and TVOC == 0 and ECO2 == 0 and ens160_attempts < 3:
         wdt.feed()
-        print("ENS160 just returned invalid values (0's)!")
+        print("\tENS160 just returned invalid values (0's)!")
         
         # reset
-        print("Setting ENS160 operating mode to 2...")
+        print("\tSetting ENS160 operating mode to 2...")
         ens.operating_mode = 2
-        print("Operating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
+        print("\tOperating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
 
         # wait
         for x in range(0, 10):
@@ -174,8 +174,6 @@ while True:
 
     # print
     print("\tReadings: " + str(body))
-
-    
 
     # upload
     if len(body) > 0: # the body has properties

@@ -54,6 +54,9 @@ print("Connected to wifi after " + str(wifi_con_attempt) + " tries!")
 my_ip:str = str(wlan.ifconfig()[0])
 print("My IP Address: " + my_ip)
 
+# set up DHT-22 sensor
+print("Setting up DHT22...")
+dht22 = dht.DHT22(machine.Pin(10, machine.Pin.IN))
 
 # Set up ENS160 + AHT21
 print("Setting up I2C...")
@@ -63,16 +66,12 @@ if len(i2c.scan()) == 0:
     error_pattern()
 print("Setting up ENS160...")
 ens = ENS160.ENS160(i2c)
-try:
-    ens.reset()
-except:
-    error_pattern()
 
-# set up DHT-22 sensor
-print("Setting up DHT22...")
-dht22 = dht.DHT22(machine.Pin(10, machine.Pin.IN))
+# turn on ENS160 (opearing mode)
+print("Setting ENS160 operating mode to 2 (gas sensing)...")
+ens.operating_mode = 2
 
-# wait some time
+# wait some time for the ENS160 to warm up
 print("Allowing 10 seconds for warm up...")
 time.sleep(10)
 

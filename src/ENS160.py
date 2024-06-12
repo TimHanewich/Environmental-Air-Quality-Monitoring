@@ -10,9 +10,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-
 import machine
-import time
 
 class ENS160:
     """
@@ -30,6 +28,14 @@ class ENS160:
         self.address = address
         self.i2c = i2c
     
+    def __str__(self) -> str:
+        ToReturn = "Operating Mode: " + self.operating_mode["text"]
+        ToReturn = ToReturn + "\n" + "AQI: " + str(self.AQI)
+        ToReturn = ToReturn + "\n" + "TVOC: " + str(self.TVOC)
+        ToReturn = ToReturn + "\n" + "ECO2: " + str(self.ECO2)
+        ToReturn = ToReturn + "\n" + "Status: " + str(self.status)
+        return ToReturn
+
     @property
     def operating_mode(self) -> dict:
         """
@@ -98,27 +104,59 @@ class ENS160:
         else:
             return {"value": val, "text": "(unknown)"}
 
-    def _get_status(self) -> int:
-        """Returns the value of DATA_STATUS at 0x20"""
-        return self.i2c.readfrom_mem(self.address, 0x20, 1)[0]
+    @property
+    def status(self) -> dict:
+        """Reads the DATA_STATUS register and translates this single byte into each field's value."""
+        statusb:int = self.i2c.readfrom_mem(self.address, 0x20, 1)[0]
+        statuss:str = self._byte_to_binary(statusb)
+        
+        ToReturn:dict = {}
+
+        # STATAS
+        if statuss[0] == "1":
+            ToReturn["STATAS"] = True
+        else:
+            ToReturn["STATAS"] = False
+
+        # STATER (error)
+        if statuss[1] == "1":
+            ToReturn["STATER"] = True
+        else:
+            ToReturn["STATER"] = False
+        
+        # validity flag
+        vf = statuss[4] + statuss[5]
+        if vf == "00":
+            ToReturn["VALIDITY FLAG"] = 0
+        elif vf == "01":
+            ToReturn["VALIDITY FLAG"] = 1
+        elif vf == "10":
+            ToReturn["VALIDITY FLAG"] = 2
+        elif vf == "11":
+            ToReturn["VALIDITY FLAG"] = 3
+
+        # New data
+        if statuss[6] == "1":
+            ToReturn["NEWDAT"] = True
+        else:
+            ToReturn["NEWDAT"] = False
+        
+        # New GPR (General Purpose Read registers)
+        if statuss[7] == "1":
+            ToReturn["NEWGPR"] = True
+        else:
+            ToReturn["NEWGPR"] = True
+
+        return ToReturn
 
     @property
     def error(self) -> bool:
-        """Indicates if there is an error with the sensor."""
-        error:int = int(self._byte_to_binary(self._get_status())[1])
-        if error == 1:
-            return True
-        else:
-            return False
+        return self.status["STATER"]
         
     @property
-    def new_data_available(self) -> bool:
+    def new_data(self) -> bool:
         """Indicates if new sensor data is available to read."""
-        nd:int = int(self._byte_to_binary(self._get_status())[6])
-        if nd == 1:
-            return True
-        else:
-            return False
+        return self.status["NEWDAT"]
         
     @property
     def signal_rating(self) -> dict:
@@ -132,18 +170,54 @@ class ENS160:
         3: Invalid output
         """
 
-        bind:str = self._byte_to_binary(self._get_status())
-        vf:str = bind[4] + bind[5]
-        if vf == "00":
+        SR:int = self.status["VALIDITY FLAG"]
+        if SR == 0:
             return {"value": 0, "text": "Normal operation"}
-        elif vf == "01":
+        elif SR == 1:
             return {"value": 1, "text": "Warm-Up phase"}
-        elif vf == "10":
+        elif SR == 2:
             return {"value": 2, "text": "Initial Start-Up phase"}
-        elif vf == "11":
+        elif SR == 3:
             return {"value": 3, "text": "Invalid output"}
 
-        
+    @property
+    def temperature(self) -> float:
+        """Reports the temperature used in calculations, in Celsius."""
+        DATA_T:bytes = self.i2c.readfrom_mem(self.address, 0x30, 2) # read raw bytes
+        DATA_T_i:int = int.from_bytes(DATA_T, "little") # convert bytes to int
+        ToReturnF:float = DATA_T_i / 64 # it is stored *64 (weird, idk why), so undo it.
+        ToReturnF = ToReturnF - 273.15
+        return ToReturnF
+
+    @temperature.setter
+    def temperature(self, temperature_c:float) -> None:
+        """Sets the temperature, in Celsius, that the ENS160 uses in its calculations."""
+        kelvin:float = temperature_c + 273.15 # the ENS160 stores as Kelvin
+        to_write:float = kelvin * 64 # for whatever reason, the ENS160 stores the temperature, in kelvin, multiplied by 64. Weird, but okay.
+        asbs:bytes = int(to_write).to_bytes(2, "little")
+        self.i2c.writeto_mem(self.address, 0x13, asbs) # write to TEMP_IN on address 0x13
+
+    @property
+    def humidity(self) -> float:
+        """Reports the relative humidity used in calculations."""
+        DATA_RH:bytes = self.i2c.readfrom_mem(self.address, 0x32, 2)
+        DATA_RH_i:int = int.from_bytes(DATA_RH, "little")
+        ToReturnF:float = DATA_RH_i / 512
+        ToReturnF = ToReturnF / 100 # return as between 0.0 and 1.0 (a percentage)
+        return ToReturnF
+
+    @humidity.setter
+    def humidity(self, relative_humidity:float) -> None:
+        """Sets the relative humidity (between 0.0 and 1.0) that will be used in calculations."""
+        if relative_humidity < 0.0 or relative_humidity > 1.0:
+            raise Exception("Please provide your relative humidity between 0.0 and 1.0 (a percentage).")
+        rhi:int = int(round(relative_humidity * 100, 0)) # the RH will be provided between 0.0 and 1.0. So scale it up to two digits.
+        rhi = rhi * 512 # the ENS160 stores it as it is multiplied by 512
+        asbs:bytes = rhi.to_bytes(2, "little")
+        self.i2c.writeto_mem(self.address, 0x15, asbs)
+
+
+
     def _translate_pair(self, high:int, low:int) -> int:
         """Converts a byte pair to a usable value. Borrowed from https://github.com/m-rtijn/mpu6050/blob/0626053a5e1182f4951b78b8326691a9223a5f7d/mpu6050/mpu6050.py#L76C39-L76C39."""
         value = (high << 8) + low
@@ -151,7 +225,8 @@ class ENS160:
             value = -((65535 - value) + 1)
         return value   
     
-    def _byte_to_binary(self, byte:int):
+    def _byte_to_binary(self, byte:int) -> str:
+        """Converts a byte into a 8-character string, each character representing a single bit, being 0 or 1."""
         if byte < 0 or byte > 255:
             raise Exception("Value of '" + str(byte) + "' is not a byte. Unable to convert.")
         binary:str = ""

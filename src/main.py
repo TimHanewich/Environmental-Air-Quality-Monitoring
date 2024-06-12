@@ -140,32 +140,9 @@ while True:
     # measure AQI, TVOC, ECO2 from ENS160
     wdt.feed()
     print("\tReading ENS160 values...")
-    ens160_attempts:int = 0 # if needed
     AQI:int = ens.AQI["value"]
     TVOC:int = ens.TVOC
     ECO2:int = ens.ECO2
-    while AQI == 0 and TVOC == 0 and ECO2 == 0 and ens160_attempts < 10:
-
-        ens160_attempts = ens160_attempts + 1
-
-        wdt.feed()
-        print("\t\tENS160 just returned invalid values (0's)!")
-        
-        # reset
-        print("\t\tSetting ENS160 operating mode to 2...")
-        ens.operating_mode = 2
-        print("\t\tOperating mode restored to 2. Waiting 10 seconds before proceeding (allow warm up)...")
-
-        # wait
-        for x in range(0, 10):
-            wdt.feed()
-            time.sleep(1)
-
-        # re-measure
-        wdt.feed()
-        AQI:int = ens.AQI["value"]
-        TVOC:int = ens.TVOC
-        ECO2:int = ens.ECO2
 
     # log if successful
     wdt.feed()

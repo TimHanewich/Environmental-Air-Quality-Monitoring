@@ -140,13 +140,18 @@ while True:
     # measure AQI, TVOC, ECO2 from ENS160
     wdt.feed()
     print("\tReading ENS160 values...")
-    AQI:int = ens.AQI["value"]
-    TVOC:int = ens.TVOC
-    ECO2:int = ens.ECO2
+    try:
+        AQI:int = ens.AQI["value"]
+        TVOC:int = ens.TVOC
+        ECO2:int = ens.ECO2
+    except:
+        AQI = None
+        TVOC = None
+        ECO2 = None
 
     # log if successful
     wdt.feed()
-    if AQI == 0 and TVOC == 0 and ECO2 == 0:
+    if AQI == None and TVOC == None and ECO2 == None:
         print("\tUnable to read valid air quality readings from ENS160. Surpassed max try attempt!")
     else:
         print("\tENS160 Air Quality Readings captured!")

@@ -58,7 +58,7 @@ print("My IP Address: " + my_ip)
 print("Setting up DHT22...")
 dht22 = dht.DHT22(machine.Pin(settings.dht22_gpio, machine.Pin.IN))
 
-# Set up ENS160 + AHT21
+# Set up ENS160
 print("Setting up I2C...")
 i2c = machine.I2C(settings.i2c_bus, scl=machine.Pin(settings.i2c_scl), sda=machine.Pin(settings.i2c_sda))
 print("I2C devices: " + str(i2c.scan()))

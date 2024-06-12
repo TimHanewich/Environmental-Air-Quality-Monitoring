@@ -60,7 +60,7 @@ dht22 = dht.DHT22(machine.Pin(settings.dht22_gpio, machine.Pin.IN))
 
 # Set up ENS160
 print("Setting up I2C...")
-i2c = machine.I2C(settings.i2c_bus, scl=machine.Pin(settings.i2c_scl), sda=machine.Pin(settings.i2c_sda))
+i2c = machine.I2C(settings.i2c_bus, scl=machine.Pin(settings.i2c_scl), sda=machine.Pin(settings.i2c_sda), freq=80000)
 print("I2C devices: " + str(i2c.scan()))
 if 0x53 not in i2c.scan(): # if the ENS160 is not seen in the list of available I2C devices
     error_pattern()

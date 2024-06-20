@@ -12,3 +12,9 @@ You can express the formula above as a Dataverse Formula column like so:
 ```
 (6.112 * (2.71828^((17.67*(('Temperature, Fahrenheit'-32)*(5/9)))/((('Temperature, Fahrenheit'-32)*(5/9))+243.5))) * 'Relative Humidity' * 2.1674) / (273.15 + (('Temperature, Fahrenheit'-32)*(5/9)))
 ```
+## Power BI Expression for Converting to EST
+To convert the `createdon` field (stored in UTC time) to EST:
+
+```
+[createdon] - #duration(0, 4, 0, 0)
+```

@@ -83,6 +83,7 @@ print("Watchdog timer now active.")
 # inifinite loop
 print("Entering infinite loop...")
 samples_uploaded:int = 0
+consecutive_post_fails:int = 0
 while True:
 
     # before proceeding to sample + upload, confirm that we are still online
@@ -172,9 +173,21 @@ while True:
             pr.close()
 
             # handle
-            if str(pr.status_code)[0:1] != "2": # if the upload was not successful (not in the 200 range), go into infinite error loop. This indicates that the receiving input is no longer accepting. No point in continuing to collect and try an upload.
-                error_pattern()
+            if str(pr.status_code)[0:1] != "2": # if the upload was not successful (not in the 200 range), this indicates that the reciving server did not accept it.
+                
+                print("\tPOST request to server returned status code '" + str(pr.status_code) + "'")
+
+                consecutive_post_fails = consecutive_post_fails + 1 # increment
+
+                print("\tWe've now reached " + str(consecutive_post_fails) + " consecutive failed POST attempts.")
+
+                # if we've reached the limit for consecutive fails, go into fail mode
+                if consecutive_post_fails >= settings.post_fail_tolerance:
+                    print("\tPOST failure tolerance of " + str(settings.post_fail_tolerance) + " reached! Going into infinite error mode...")
+                    error_pattern()
+
             else:
+                consecutive_post_fails = 0 # reset consecutive failures count
                 samples_uploaded = samples_uploaded + 1
                 print("\tUpload successful!")
 
